@@ -1,0 +1,16 @@
+{
+  "testURL": "http://localhost/",
+  "moduleFileExtensions": ["ts", "tsx", "js", "json"],
+  "testEnvironment": "node",
+  "notify": false,
+  "transform": {
+    "^.+\\.tsx?$": "ts-jest"
+  },
+  "testRegex": "/e2e/.*\\.(e2e.test|e2e.spec).(ts|tsx|js)$",
+  "globals": {
+    "ts-jest": {
+      "skipBabel": true
+    }
+  },
+  "setupTestFrameworkScriptFile":"<rootDir>/jest.setup.ts"
+}
