@@ -1,9 +1,12 @@
 import { Test } from '@nestjs/testing';
 import { Utils } from '../utils';
 import { EventsModule } from '../../src/events/events.module';
+import { SocketService } from '../socket.service';
+import { observe } from 'rxjs-marbles/jest';
+import { tap, take } from 'rxjs/operators';
 
 describe('Events', () => {
-    let socket: SocketIOClient.Socket;
+    let socket: SocketService;
 
     beforeEach(async () => {
         const testingModule = await Test.createTestingModule({
@@ -12,8 +15,7 @@ describe('Events', () => {
 
         await Utils.startServer(testingModule);
         // each test need a new socket connection
-        await Utils.connectSocket();
-        socket = Utils.socket;
+        socket = await Utils.createSocket();
     });
 
     afterEach(async () => {
@@ -21,26 +23,57 @@ describe('Events', () => {
         await Utils.closeApp();
     });
 
-    describe('should return a correct event', () => {
-        it('when socket is connected', done => {
-            socket.on('connect', () => {
-                // this only checks if the expect is executed
-                expect(true).toBeTruthy();
-                done();
-            });
+    describe('should return a correct event using observe', () => {
+        it(
+            'when socket is connected',
+            observe(() => socket.once('connect').pipe(tap(() => expect(true).toBeTruthy()))),
+        );
+
+        it(
+            'when socket send normal data',
+            observe(() => {
+                let counter = 1;
+
+                socket
+                    .once('connect')
+                    .pipe(tap(() => socket.emit('events', { test: 'test' })))
+                    .subscribe();
+
+                return socket.on('events').pipe(
+                    take(3),
+                    tap(data => expect(data).toBe(counter++)),
+                );
+            }),
+        );
+    });
+
+    describe('should return a correct event using toPromise', () => {
+        it('when socket is connected', () => {
+            return socket
+                .once('connect')
+                .pipe(tap(() => expect(true).toBeTruthy()))
+                .toPromise();
         });
-        it('when socket send normal data', done => {
-            let counter = 0;
-            socket.on('connect', () => {
-                socket.emit('events', { test: 'test' });
-            });
-            socket.on('events', data => {
-                // this test will check the expec 3 times before doing 'done' function
-                expect(data).toBe(counter + 1);
-                // counter is needed for the recusive example
-                counter++;
-                done();
-            });
+
+        it('when socket send normal data', () => {
+            let counter = 1;
+
+            socket
+                .once('connect')
+                .pipe(
+                    tap(() => {
+                        socket.emit('events', { test: 'test' });
+                    }),
+                )
+                .subscribe();
+
+            return socket
+                .on('events')
+                .pipe(
+                    take(3),
+                    tap(data => expect(data).toBe(counter++)),
+                )
+                .toPromise();
         });
     });
 });

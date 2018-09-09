@@ -3,10 +3,10 @@ import { INestApplication } from '@nestjs/common/interfaces';
 
 import * as express from 'express';
 import * as bodyParser from 'body-parser';
-import * as io from 'socket.io-client';
+import { SocketService } from './socket.service';
 
 export class Utils {
-    public static socket: SocketIOClient.Socket;
+    public static socket: SocketService;
     private static server: express.Express;
     private static app: INestApplication;
     private static module: TestingModule;
@@ -19,12 +19,11 @@ export class Utils {
         await this.app.init();
     }
 
-    public static async connectSocket() {
+    public static async createSocket(defer: boolean = false) {
         await this.app.listen(3001);
-        this.socket = io.connect(
-            'ws://localhost:3001',
-            { forceNew: true },
-        );
+        this.socket = new SocketService(defer);
+
+        return this.socket;
     }
     public static async closeApp() {
         this.socket.close();
